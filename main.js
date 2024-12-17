@@ -25,7 +25,7 @@ const transporter = nodemailer.createTransport({
 app.post("/sendEmail", async (req, res) => {
   const mailOptions = {
     from: "donotreply.bitwise@gmail.com",
-    to: req.body.email,
+    to: "saikrishnagupta786@icloud.com",
     subject: req.body.subject,
     text: req.body.text,
   };
