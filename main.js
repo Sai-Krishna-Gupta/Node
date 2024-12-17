@@ -15,6 +15,8 @@ app.listen(app.get("port"), () => {
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
+  port: 465,
+  secure: 'true',
   auth: {
     user: "donotreply.bitwise@gmail.com",
     pass: "lbpq avax dait xnyc",
