@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const nodemailer = require("nodemailer");
+const request = require("request");
 
 const app = express();
 app.use(cors());
@@ -12,28 +13,23 @@ app.listen(app.get("port"), () => {
   console.log(`Server is running on port ${app.get("port")}`);
 });
 
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit numeric OTP
-}
-
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "saikrishnagupta786@gmail.com",
-    pass: "pjlm hvik ydcl fkta",
+    user: "donotreply.bitwise@gmail.com",
+    pass: "lbpq avax dait xnyc",
   },
 });
 app.post("/sendEmail", async (req, res) => {
-  const OTP = generateOTP();
   const mailOptions = {
-    from: "saikrishnagupta786@gmail.com",
+    from: "donotreply.bitwise@gmail.com",
     to: req.body.email,
-    subject: "OTP",
-    text: `Here is the OTP to verify your email address to become a writer for our company.\n${OTP}`,
+    subject: req.body.subject,
+    text: req.body.text,
   };
   try {
     await transporter.sendMail(mailOptions);
-    res.send({ message: "Email sent Successfully", OTP: OTP });
+    res.send({ message: "Email sent Successfully" });
   } catch (err) {
     console.error("Error Sending Email: ", err);
   }
@@ -61,14 +57,67 @@ const writerSchema = new mongoose.Schema({
   password: String,
   admin: Boolean,
 });
+const changeSchema = new mongoose.Schema({
+  change: String,
+  priority: String,
+});
 let article = mongoose.model("articles", schema);
 let writer = mongoose.model("writers", writerSchema);
+let change = mongoose.model("changes", changeSchema);
 const db = mongoose.connection;
 db.on("error", (err) => {
   console.log(err);
 });
 
 db.once("open", () => {
+  app.post("/addChange", (req, res) => {
+    var dataReceived = req.body
+    request.post(
+      {
+        url: "https://node-ljy1.onrender.com/sendEmail",
+        json: {
+          email: "saikrishnagupta786@icloud.com",
+          subject: "Change Added",
+          text: `${dataReceived.postedBy} has suggested ${dataReceived.change} with a priority ${req.body.priority}`,
+        },
+      },
+      (err, res, body) => {
+        if (err) {
+          console.error("Error Sending Email", err);
+          return;
+        }
+        console.log("Created Post: ", body);
+      }
+    );
+    change
+      .create({ change: req.body.change, priority: req.body.priority })
+      .then(
+        (result) => {
+          res.send(result);
+        },
+        (err) => {
+          res.send(err.message);
+        }
+      )
+      .catch((err) => {
+        console.log(err);
+      });
+  });
+  app.get("/emailsRegistered", (req, res) => {
+    writer
+      .find({}, { email: 1, _id: 0 })
+      .then(
+        (result) => {
+          res.send(result);
+        },
+        (err) => {
+          res.send(err.message);
+        }
+      )
+      .catch((err) => {
+        console.log(err);
+      });
+  });
   app.get("/nonAdminWriters", (req, res) => {
     writer
       .find({ ["admin"]: false })
@@ -85,7 +134,6 @@ db.once("open", () => {
       });
   });
   app.post("/deleteWriter", (req, res) => {
-    console.log(req.body);
     writer
       .deleteOne(req.body)
       .then(
