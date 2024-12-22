@@ -25,7 +25,7 @@ function verifyApiKey(req,res){
   if(!apiKey || apiKey !== 'SaiRam@123'){
     return res.status(403).json({message: "Forbidden: Invalid API Key"});
   }
-  next();
+  return 0;
 }
 app.post("/sendEmail", async (req, res) => {
   verifyApiKey(req,res);
