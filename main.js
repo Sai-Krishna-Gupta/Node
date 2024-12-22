@@ -15,8 +15,6 @@ app.listen(app.get("port"), () => {
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  port: 465,
-  secure: 'true',
   auth: {
     user: "donotreply.bitwise@gmail.com",
     pass: "lbpq avax dait xnyc",
@@ -25,7 +23,7 @@ const transporter = nodemailer.createTransport({
 app.post("/sendEmail", async (req, res) => {
   const mailOptions = {
     from: "donotreply.bitwise@gmail.com",
-    to: "saikrishnagupta786@icloud.com",
+    to: req.body.email,
     subject: req.body.subject,
     text: req.body.text,
   };
