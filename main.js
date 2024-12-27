@@ -9,6 +9,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.set("port", process.env.PORT || 3000);
+app.use(express.json({ limit: "10mb" }));
 app.listen(app.get("port"), () => {
   console.log(`Server is running on port ${app.get("port")}`);
 });
@@ -20,15 +21,15 @@ const transporter = nodemailer.createTransport({
     pass: "lbpq avax dait xnyc",
   },
 });
-function verifyApiKey(req,res){
-  const apiKey = req.headers['api-key'];
-  if(!apiKey || apiKey !== 'SaiRam@123'){
-    return res.status(403).json({message: "Forbidden: Invalid API Key"});
+function verifyApiKey(req, res) {
+  const apiKey = req.headers["api-key"];
+  if (!apiKey || apiKey !== "SaiRam@123") {
+    return res.status(403).json({ message: "Forbidden: Invalid API Key" });
   }
   return 0;
 }
 app.post("/sendEmail", async (req, res) => {
-  verifyApiKey(req,res);
+  verifyApiKey(req, res);
   const mailOptions = {
     from: "donotreply.bitwise@gmail.com",
     to: req.body.email,
@@ -59,6 +60,13 @@ const schema = new mongoose.Schema({
   upVotes: Number,
   downVotes: Number,
 });
+const imageSchema = new mongoose.Schema(
+  {
+    filename: String,
+    data: Buffer,
+  },
+  { timestamps: true }
+);
 const writerSchema = new mongoose.Schema({
   name: String,
   email: String,
@@ -108,6 +116,8 @@ let writer = mongoose.model("writers", writerSchema);
 let change = mongoose.model("changes", changeSchema);
 let user = mongoose.model("Users", userSchema);
 let articleVote = mongoose.model("Votes", articleVotesSchema);
+let Image = mongoose.model("Image", imageSchema);
+
 let IndianCompany = mongoose.model("IndianCompany", IndianCompanySchema);
 const db = mongoose.connection;
 db.on("error", (err) => {
@@ -116,7 +126,7 @@ db.on("error", (err) => {
 
 db.once("open", () => {
   app.get("/getCompanyData", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     IndianCompany.find({})
       .then(
         (result) => {
@@ -131,7 +141,7 @@ db.once("open", () => {
       });
   });
   app.post("/updateCompanyData", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     IndianCompany.deleteMany({})
       .then((result) => {
         console.log(`${result.deletedCount} documents deleted.`);
@@ -153,11 +163,11 @@ db.once("open", () => {
       });
   });
   app.post("/userVotes", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     //HAVE TO DO LATER>>>>>>>>>>>>>>>>>>>>>>>>>>>
   });
   app.post("/articleVoted", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     req.body.articleId = new mongoose.Types.ObjectId(req.body.articleId);
     articleVote
       .create(req.body)
@@ -190,7 +200,7 @@ db.once("open", () => {
   });
 
   app.post("/addUser", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     user
       .create(req.body)
       .then(
@@ -206,7 +216,7 @@ db.once("open", () => {
       });
   });
   app.get("/usersRegistered", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     user
       .find({}, { email: 1, _id: 0 })
       .then(
@@ -222,7 +232,7 @@ db.once("open", () => {
       });
   });
   app.post("/addChange", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     console.log("Came");
     axios
       .post(
@@ -255,7 +265,7 @@ db.once("open", () => {
       });
   });
   app.get("/emailsRegistered", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     writer
       .find({}, { email: 1, _id: 0 })
       .then(
@@ -271,7 +281,7 @@ db.once("open", () => {
       });
   });
   app.get("/nonAdminWriters", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     writer
       .find({ ["admin"]: false })
       .then(
@@ -287,7 +297,7 @@ db.once("open", () => {
       });
   });
   app.post("/deleteWriter", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     writer
       .deleteOne(req.body)
       .then(
@@ -303,7 +313,7 @@ db.once("open", () => {
       });
   });
   app.post("/getLogin", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     writer
       .find(req.body)
       .then(
@@ -319,7 +329,7 @@ db.once("open", () => {
       });
   });
   app.post("/getUser", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     user
       .find(req.body)
       .then(
@@ -335,7 +345,7 @@ db.once("open", () => {
       });
   });
   app.post("/addWriter", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     writer
       .create(req.body)
       .then(
@@ -351,7 +361,7 @@ db.once("open", () => {
       });
   });
   app.get("/readAll", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     article
       .find({})
       .then(
@@ -367,7 +377,7 @@ db.once("open", () => {
       });
   });
   app.post("/readOne", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     article
       .findOne(req.body)
       .then(
@@ -384,7 +394,7 @@ db.once("open", () => {
     p;
   });
   app.post("/deleteOne", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     article
       .deleteOne(req.body)
       .then(
@@ -400,7 +410,7 @@ db.once("open", () => {
       });
   });
   app.post("/insertOne", (req, res) => {
-    verifyApiKey(req,res)
+    verifyApiKey(req, res);
     article
       .create(req.body)
       .then(
@@ -414,5 +424,53 @@ db.once("open", () => {
       .catch((err) => {
         console.log(err);
       });
+  });
+  app.post("/upload", async (req, res) => {
+    const { filename, base64 } = req.body;
+
+    if (!filename || !base64) {
+      return res
+        .status(400)
+        .json({ message: "Filename and Base64 data are required" });
+    }
+
+    try {
+      // Decode the Base64 string to binary (Buffer)
+      const binaryData = Buffer.from(base64.split(",")[1], "base64");
+
+      // Create a new image document with binary data
+      const newImage = new Image({ filename, data: binaryData });
+
+      // Save the image document to MongoDB
+      const savedImage = await newImage.save();
+
+      res.json({
+        message: "File uploaded successfully",
+        imageId: savedImage._id,
+      });
+    } catch (err) {
+      res.status(500).send(err);
+    }
+  });
+
+  app.get("/image/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const image = await Image.findById(id);
+
+      if (!image) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+      const base64 = `data:image/${image.filename
+        .split(".")
+        .pop()};base64,${image.data.toString("base64")}`;
+      res.json({
+        filename: image.filename,
+        base64,
+      });
+    } catch (err) {
+      res.status(500).send(err);
+    }
   });
 });
