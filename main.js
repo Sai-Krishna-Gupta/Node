@@ -4,12 +4,14 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const nodemailer = require("nodemailer");
 const axios = require("axios");
+const e = require("express");
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.set("port", process.env.PORT || 3000);
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "100mb" }));
+
 app.listen(app.get("port"), () => {
   console.log(`Server is running on port ${app.get("port")}`);
 });
@@ -21,6 +23,7 @@ const transporter = nodemailer.createTransport({
     pass: "lbpq avax dait xnyc",
   },
 });
+
 function verifyApiKey(req, res) {
   const apiKey = req.headers["api-key"];
   if (!apiKey || apiKey !== "SaiRam@123") {
@@ -52,6 +55,9 @@ mongoose.connect(
   "mongodb+srv://saikrishnagupta786:KanakDbPassword@cluster0.kjzng.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
   clientOptions
 );
+const subscriberSchema = new mongoose.Schema({
+  email: String,
+});
 const schema = new mongoose.Schema({
   data: String,
   title: String,
@@ -111,19 +117,41 @@ const IndianCompanySchema = new mongoose.Schema({
   "365 D % CHNG \n": String,
   "Date \n": String,
 });
+let subscriber = mongoose.model("subscribers", subscriberSchema);
 let article = mongoose.model("articles", schema);
 let writer = mongoose.model("writers", writerSchema);
 let change = mongoose.model("changes", changeSchema);
 let user = mongoose.model("Users", userSchema);
 let articleVote = mongoose.model("Votes", articleVotesSchema);
 let Image = mongoose.model("Image", imageSchema);
-
 let IndianCompany = mongoose.model("IndianCompany", IndianCompanySchema);
 const db = mongoose.connection;
 db.on("error", (err) => {
   console.log(err);
 });
-
+function sendEmail(email, subject, text) {
+  axios
+    .post(
+      "https://node-ljy1.onrender.com/sendEmail",
+      {
+        email: email,
+        subject: subject,
+        text: text,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": "SaiRam@123",
+        },
+      }
+    )
+    .then((response) => {
+      console.log("Response:", response.data);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
+}
 db.once("open", () => {
   app.get("/getCompanyData", (req, res) => {
     verifyApiKey(req, res);
@@ -198,14 +226,13 @@ db.once("open", () => {
         console.log(err);
       });
   });
-
   app.post("/addUser", (req, res) => {
     verifyApiKey(req, res);
     user
       .create(req.body)
       .then(
         (result) => {
-          res.send({ message: "Record Added" });
+          res.send(result);
         },
         (err) => {
           res.send(err.message);
@@ -233,23 +260,11 @@ db.once("open", () => {
   });
   app.post("/addChange", (req, res) => {
     verifyApiKey(req, res);
-    console.log("Came");
-    axios
-      .post(
-        "https://node-ljy1.onrender.com/sendEmail",
-        {
-          email: "saikrishnagupta786@gmail.com",
-          subject: "Change Added",
-          text: `\"${req.body.postedBy}\" has suggested \"${req.body.change}\" with a priority \"${req.body.priority}\"`,
-        },
-        { headers: { "Content-Type": "application/json" } }
-      )
-      .then((response) => {
-        console.log("Response:", response.data);
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-      });
+    sendEmail(
+      "saikrishnagupta786@gmail.com",
+      "Change Added",
+      `\"${req.body.postedBy}\" has suggested \"${req.body.change}\" with a priority \"${req.body.priority}\"`
+    );
     change
       .create({ change: req.body.change, priority: req.body.priority })
       .then(
@@ -415,6 +430,16 @@ db.once("open", () => {
       .create(req.body)
       .then(
         (result) => {
+          subscriber.find({}, { email: 1, _id: 0 }).then((result) => {
+            result.forEach((element) => {
+              console.log(element);
+              sendEmail(
+                element.email,
+                "New Article",
+                `${req.body.postedBy} has posted a new article. Click here to check it out: https://bitwise-hub.github.io/bitwise/browser/`
+              );
+            });
+          });
           res.send({ message: "Record Added" });
         },
         (err) => {
@@ -425,34 +450,6 @@ db.once("open", () => {
         console.log(err);
       });
   });
-  app.post("/upload", async (req, res) => {
-    const { filename, base64 } = req.body;
-
-    if (!filename || !base64) {
-      return res
-        .status(400)
-        .json({ message: "Filename and Base64 data are required" });
-    }
-
-    try {
-      // Decode the Base64 string to binary (Buffer)
-      const binaryData = Buffer.from(base64.split(",")[1], "base64");
-
-      // Create a new image document with binary data
-      const newImage = new Image({ filename, data: binaryData });
-
-      // Save the image document to MongoDB
-      const savedImage = await newImage.save();
-
-      res.json({
-        message: "File uploaded successfully",
-        imageId: savedImage._id,
-      });
-    } catch (err) {
-      res.status(500).send(err);
-    }
-  });
-
   app.get("/image/:id", async (req, res) => {
     const { id } = req.params;
 
@@ -473,4 +470,89 @@ db.once("open", () => {
       res.status(500).send(err);
     }
   });
+  app.post("/addSubscriber", (req, res) => {
+    verifyApiKey(req, res);
+    subscriber
+      .create({ email: req.body.email })
+      .then(
+        (result) => {
+          sendEmail(req.body.email, req.body.subject, req.body.text);
+          res.send({ message: "Record Added" });
+        },
+        (err) => {
+          console.log(err.message);
+          res.send(err.message);
+        }
+      )
+      .catch((err) => {
+        console.log(err);
+      });
+  });
+  app.get("", (req,res) => {
+    subscriber.deleteMany({email: "saikrishnagupta786@gmail.com"}).then((result) => {
+      console.log(result);
+    })
+  })
+  app.get("/subscriberList", (req, res) => {
+    verifyApiKey(req, res);
+    subscriber
+      .find({})
+      .then(
+        (result) => {
+          res.send(result);
+        },
+        (err) => {
+          res.send(err.message);
+        }
+      )
+      .catch((err) => {
+        console.log(err);
+      });
+  });
 });
+
+app.post("/upload", async (req, res) => {
+  const { filename, base64 } = req.body;
+
+  if (!filename || !base64) {
+    return res
+      .status(400)
+      .json({ message: "Filename and Base64 data are required" });
+  }
+
+  try {
+    // Decode the Base64 string to binary (Buffer)
+    const binaryData = Buffer.from(base64.split(",")[1], "base64");
+    const link = uploadBinaryToImgur(binaryData);
+    res.json({
+      message: "File uploaded successfully",
+      link,
+    });
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+async function uploadBinaryToImgur(binaryData) {
+  const url = "https://api.imgur.com/3/image";
+
+  try {
+    // Send the binary image data as multipart/form-data
+    const response = await axios.post(url, binaryData, {
+      headers: {
+        Authorization: "8b2aa1437f45f07", // Replace with your Client ID
+        "Content-Type": "application/octet-stream", // Indicate binary data
+      },
+      params: {
+        type: "file", // Instruct Imgur it's a file upload
+      },
+    });
+
+    console.log("Uploaded Image URL:", response.data.data.link); // Link to the uploaded image
+  } catch (error) {
+    console.error(
+      "Error uploading to Imgur:",
+      error.response ? error.response.data : error.message
+    );
+  }
+}
