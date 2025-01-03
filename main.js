@@ -100,33 +100,39 @@ const articleVotesSchema = new mongoose.Schema({
   liked: Boolean,
 });
 const IndianCompanySchema = new mongoose.Schema({
-  "SYMBOL \n": String,
-  "OPEN \n": String,
-  "HIGH \n": String,
-  "LOW \n": String,
-  "PREV. CLOSE \n": String,
-  "LTP \n": String,
-  "INDICATIVE CLOSE \n": String,
-  "CHNG \n": String,
-  "%CHNG \n": String,
-  "VOLUME \n(shares)": String,
-  "VALUE \n (₹ Crores)": String,
-  "52W H \n": String,
-  "52W L \n": String,
-  "30 D   %CHNG \n": String,
-  "365 D % CHNG \n": String,
-  "Date \n": String,
+  "SYMBOL \r\n": String,
+  "OPEN \r\n": String,
+  "HIGH \r\n": String,
+  "LOW \r\n": String,
+  "PREV. CLOSE \r\n": String,
+  "LTP \r\n": String,
+  "INDICATIVE CLOSE \r\n": String,
+  "CHNG \r\n": String,
+  "%CHNG \r\n": String,
+  "VOLUME \r\n(shares)": String,
+  "VALUE \r\n (₹ Crores)": String,
+  "52W H \r\n": String,
+  "52W L \r\n": String,
+  "30 D   %CHNG \r\n": String,
+  "365 D % CHNG \r\n": String,
+  "Date \r\n": String,
 });
 const gitSchema = new mongoose.Schema({}, { strict: false });
+const newsLetterSchema = new mongoose.Schema({
+  data: String,
+});
+
 let subscriber = mongoose.model("subscribers", subscriberSchema);
 let article = mongoose.model("articles", schema);
 let writer = mongoose.model("writers", writerSchema);
 let change = mongoose.model("changes", changeSchema);
-let user = mongoose.model("Users", userSchema); 
+let user = mongoose.model("Users", userSchema);
 let articleVote = mongoose.model("Votes", articleVotesSchema);
 let Image = mongoose.model("Image", imageSchema);
 let IndianCompany = mongoose.model("IndianCompany", IndianCompanySchema);
 let gitModel = mongoose.model("gitPAT", gitSchema);
+let newsLetter = mongoose.model("NewsLetter", newsLetterSchema);
+
 const db = mongoose.connection;
 db.on("error", (err) => {
   console.log(err);
@@ -155,6 +161,46 @@ function sendEmail(email, subject, text) {
     });
 }
 db.once("open", () => {
+  app.post("/setNewsLetter", (req, res) => {
+    verifyApiKey(req, res);
+    newsLetter
+      .deleteMany({})
+      .then((result) => {
+        newsLetter
+          .create(req.body)
+          .then(
+            (result) => {
+              res.send(result);
+            },
+            (err) => {
+              res.send(err.message);
+            }
+          )
+          .catch((err) => {
+            console.log(err);
+          });
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  });
+  app.get("/getNewsLetter", (req, res) => {
+    verifyApiKey(req, res);
+    newsLetter
+      .find({})
+      .then(
+        (result) => {
+          res.send(result);
+        },
+
+        (err) => {
+          res.send(err.message);
+        }
+      )
+      .catch((err) => {
+        console.log(err);
+      });
+  });
   app.get("/getGitPAT", (req, res) => {
     verifyApiKey(req, res);
     gitModel
@@ -486,7 +532,7 @@ db.once("open", () => {
         console.log(err);
       });
   });
-  
+
   app.get("/subscriberList", (req, res) => {
     verifyApiKey(req, res);
     subscriber
