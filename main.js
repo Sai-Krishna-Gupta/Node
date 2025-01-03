@@ -100,31 +100,33 @@ const articleVotesSchema = new mongoose.Schema({
   liked: Boolean,
 });
 const IndianCompanySchema = new mongoose.Schema({
-  "SYMBOL \r\n": String,
-  "OPEN \r\n": String,
-  "HIGH \r\n": String,
-  "LOW \r\n": String,
-  "PREV. CLOSE \r\n": String,
-  "LTP \r\n": String,
-  "INDICATIVE CLOSE \r\n": String,
-  "CHNG \r\n": String,
-  "%CHNG \r\n": String,
-  "VOLUME \r\n(shares)": String,
-  "VALUE \r\n (₹ Crores)": String,
-  "52W H \r\n": String,
-  "52W L \r\n": String,
-  "30 D   %CHNG \r\n": String,
-  "365 D % CHNG \r\n": String,
-  "Date \r\n": String,
+  "SYMBOL \n": String,
+  "OPEN \n": String,
+  "HIGH \n": String,
+  "LOW \n": String,
+  "PREV. CLOSE \n": String,
+  "LTP \n": String,
+  "INDICATIVE CLOSE \n": String,
+  "CHNG \n": String,
+  "%CHNG \n": String,
+  "VOLUME \n(shares)": String,
+  "VALUE \n (₹ Crores)": String,
+  "52W H \n": String,
+  "52W L \n": String,
+  "30 D   %CHNG \n": String,
+  "365 D % CHNG \n": String,
+  "Date \n": String,
 });
+const gitSchema = new mongoose.Schema({}, { strict: false });
 let subscriber = mongoose.model("subscribers", subscriberSchema);
 let article = mongoose.model("articles", schema);
 let writer = mongoose.model("writers", writerSchema);
 let change = mongoose.model("changes", changeSchema);
-let user = mongoose.model("Users", userSchema);
+let user = mongoose.model("Users", userSchema); 
 let articleVote = mongoose.model("Votes", articleVotesSchema);
 let Image = mongoose.model("Image", imageSchema);
 let IndianCompany = mongoose.model("IndianCompany", IndianCompanySchema);
+let gitModel = mongoose.model("gitPAT", gitSchema);
 const db = mongoose.connection;
 db.on("error", (err) => {
   console.log(err);
@@ -153,6 +155,22 @@ function sendEmail(email, subject, text) {
     });
 }
 db.once("open", () => {
+  app.get("/getGitPAT", (req, res) => {
+    verifyApiKey(req, res);
+    gitModel
+      .find({})
+      .then(
+        (result) => {
+          res.send({ PAT: result[0].gitPAT });
+        },
+        (err) => {
+          res.send(err.message);
+        }
+      )
+      .catch((err) => {
+        console.log("Error deleting documents:", err);
+      });
+  });
   app.get("/getCompanyData", (req, res) => {
     verifyApiKey(req, res);
     IndianCompany.find({})
@@ -450,26 +468,6 @@ db.once("open", () => {
         console.log(err);
       });
   });
-  app.get("/image/:id", async (req, res) => {
-    const { id } = req.params;
-
-    try {
-      const image = await Image.findById(id);
-
-      if (!image) {
-        return res.status(404).json({ message: "Image not found" });
-      }
-      const base64 = `data:image/${image.filename
-        .split(".")
-        .pop()};base64,${image.data.toString("base64")}`;
-      res.json({
-        filename: image.filename,
-        base64,
-      });
-    } catch (err) {
-      res.status(500).send(err);
-    }
-  });
   app.post("/addSubscriber", (req, res) => {
     verifyApiKey(req, res);
     subscriber
@@ -488,11 +486,7 @@ db.once("open", () => {
         console.log(err);
       });
   });
-  app.get("", (req,res) => {
-    subscriber.deleteMany({email: "saikrishnagupta786@gmail.com"}).then((result) => {
-      console.log(result);
-    })
-  })
+  
   app.get("/subscriberList", (req, res) => {
     verifyApiKey(req, res);
     subscriber
@@ -510,49 +504,3 @@ db.once("open", () => {
       });
   });
 });
-
-app.post("/upload", async (req, res) => {
-  const { filename, base64 } = req.body;
-
-  if (!filename || !base64) {
-    return res
-      .status(400)
-      .json({ message: "Filename and Base64 data are required" });
-  }
-
-  try {
-    // Decode the Base64 string to binary (Buffer)
-    const binaryData = Buffer.from(base64.split(",")[1], "base64");
-    const link = uploadBinaryToImgur(binaryData);
-    res.json({
-      message: "File uploaded successfully",
-      link,
-    });
-  } catch (err) {
-    res.status(500).send(err);
-  }
-});
-
-async function uploadBinaryToImgur(binaryData) {
-  const url = "https://api.imgur.com/3/image";
-
-  try {
-    // Send the binary image data as multipart/form-data
-    const response = await axios.post(url, binaryData, {
-      headers: {
-        Authorization: "8b2aa1437f45f07", // Replace with your Client ID
-        "Content-Type": "application/octet-stream", // Indicate binary data
-      },
-      params: {
-        type: "file", // Instruct Imgur it's a file upload
-      },
-    });
-
-    console.log("Uploaded Image URL:", response.data.data.link); // Link to the uploaded image
-  } catch (error) {
-    console.error(
-      "Error uploading to Imgur:",
-      error.response ? error.response.data : error.message
-    );
-  }
-}
