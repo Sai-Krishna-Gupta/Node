@@ -117,6 +117,13 @@ const IndianCompanySchema = new mongoose.Schema({
   "365 D % CHNG \r\n": String,
   "Date \r\n": String,
 });
+const IndianIndicesSchema = new mongoose.Schema({
+  "SYMBOL \r\n": String,
+  "CHNG \r\n": String,
+  "%CHNG \r\n": String,
+  "LTP \r\n": String,
+  category: String,
+});
 const gitSchema = new mongoose.Schema({}, { strict: false });
 const newsLetterSchema = new mongoose.Schema({
   data: String,
@@ -132,6 +139,7 @@ let Image = mongoose.model("Image", imageSchema);
 let IndianCompany = mongoose.model("IndianCompany", IndianCompanySchema);
 let gitModel = mongoose.model("gitPAT", gitSchema);
 let newsLetter = mongoose.model("NewsLetter", newsLetterSchema);
+let IndianIndices = mongoose.model("Indices", IndianIndicesSchema);
 
 const db = mongoose.connection;
 db.on("error", (err) => {
@@ -161,6 +169,43 @@ function sendEmail(email, subject, text) {
     });
 }
 db.once("open", () => {
+  app.post("/setIndices", (req, res) => {
+    verifyApiKey(req, res);
+    IndianIndices.deleteMany({ category: req.body[0].category })
+      .then((result) => {
+        console.log(`${result.deletedCount} documents deleted.`);
+        IndianIndices.insertMany(req.body)
+          .then(
+            (result) => {
+              res.send(result);
+            },
+            (err) => {
+              res.send(err.message);
+            }
+          )
+          .catch((err) => {
+            console.log(err);
+          });
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  });
+  app.post("/findByCategory", (req, res) => {
+    verifyApiKey(req, res);
+    IndianIndices.find(req.body)
+      .then(
+        (result) => {
+          res.send(result);
+        },
+        (err) => {
+          res.send(err.message);
+        }
+      )
+      .catch((err) => {
+        console.log(err);
+      });
+  });
   app.post("/setNewsLetter", (req, res) => {
     verifyApiKey(req, res);
     newsLetter
@@ -237,21 +282,21 @@ db.once("open", () => {
     IndianCompany.deleteMany({})
       .then((result) => {
         console.log(`${result.deletedCount} documents deleted.`);
+        IndianCompany.insertMany(req.body)
+          .then(
+            (result) => {
+              res.send(result);
+            },
+            (err) => {
+              res.send(err.message);
+            }
+          )
+          .catch((err) => {
+            console.log(err);
+          });
       })
       .catch((err) => {
         console.log("Error deleting documents:", err);
-      });
-    IndianCompany.insertMany(req.body)
-      .then(
-        (result) => {
-          res.send(result);
-        },
-        (err) => {
-          res.send(err.message);
-        }
-      )
-      .catch((err) => {
-        console.log(err);
       });
   });
   app.post("/userVotes", (req, res) => {
